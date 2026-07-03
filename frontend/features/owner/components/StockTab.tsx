@@ -7,11 +7,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, AlertTriangle, ShieldAlert, CheckCircle, X } from 'lucide-react';
 import api from '../../../services/api';
 import { Product } from '../../../types';
-import { supplySchema, SupplyInput } from '../../../lib/validation';
+import { supplySchema, SupplyInput, createProductSchema, CreateProductInput } from '../../../lib/validation';
 
 export default function StockTab() {
   const queryClient = useQueryClient();
   const [showSupplyModal, setShowSupplyModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [apiError, setApiError] = useState('');
 
@@ -82,18 +83,27 @@ export default function StockTab() {
     <div className="flex flex-col gap-4">
       <div className="flex justify-between items-center">
         <h2 className="text-sm font-bold text-slate-300">Товары на складе</h2>
-        <button 
-          onClick={() => {
-            reset();
-            setApiError('');
-            setSuccessMsg('');
-            setShowSupplyModal(true);
-          }}
-          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white flex items-center gap-1 transition-colors"
-        >
-          <Plus size={14} />
-          Поставка
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="px-3 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-900 text-xs font-bold text-slate-300 flex items-center gap-1 transition-colors animate-in fade-in"
+          >
+            <Plus size={14} />
+            Добавить товар
+          </button>
+          <button 
+            onClick={() => {
+              reset();
+              setApiError('');
+              setSuccessMsg('');
+              setShowSupplyModal(true);
+            }}
+            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white flex items-center gap-1 transition-colors"
+          >
+            <Plus size={14} />
+            Поставка
+          </button>
+        </div>
       </div>
 
       {/* Stock list */}
@@ -231,6 +241,172 @@ export default function StockTab() {
           </div>
         </div>
       )}
+
+      {showCreateModal && (
+        <CreateProductModal onClose={() => setShowCreateModal(false)} />
+      )}
+    </div>
+  );
+}
+
+interface CreateProductModalProps {
+  onClose: () => void;
+}
+
+function CreateProductModal({ onClose }: CreateProductModalProps) {
+  const queryClient = useQueryClient();
+  const [successMsg, setSuccessMsg] = useState('');
+  const [apiError, setApiError] = useState('');
+
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateProductInput>({
+    resolver: zodResolver(createProductSchema),
+    defaultValues: {
+      name: '',
+      category: '',
+      costPrice: '',
+      wholesalePrice: '',
+      stockQuantity: 0,
+      minStockLevel: 5,
+    }
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: CreateProductInput) => {
+      const response = await api.post('/api/products/', {
+        name: data.name,
+        category: data.category,
+        cost_price: data.costPrice,
+        wholesale_price: data.wholesalePrice,
+        stock_quantity: data.stockQuantity,
+        min_stock_level: data.minStockLevel,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      setSuccessMsg('Товар успешно добавлен!');
+      queryClient.invalidateQueries({ queryKey: ['products_full'] });
+      reset();
+      setTimeout(() => {
+        setSuccessMsg('');
+        onClose();
+      }, 1500);
+    },
+    onError: (error: any) => {
+      setApiError(error.response?.data?.detail || error.response?.data?.name?.[0] || 'Ошибка при добавлении товара');
+    }
+  });
+
+  const onSubmit = (data: CreateProductInput) => {
+    setApiError('');
+    createMutation.mutate(data);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-end justify-center p-4">
+      <div className="w-full max-w-[440px] bg-slate-900 border border-slate-800 rounded-t-2xl p-6 flex flex-col gap-5 shadow-2xl relative max-h-[85vh] overflow-y-auto mb-16">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-200"
+        >
+          <X size={18} />
+        </button>
+
+        <h2 className="text-base font-bold text-white">Добавление нового товара</h2>
+
+        {successMsg ? (
+          <div className="py-6 flex flex-col items-center justify-center gap-3 text-center">
+            <CheckCircle size={40} className="text-green-500 animate-bounce" />
+            <p className="text-sm font-semibold text-slate-200">{successMsg}</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-slate-400">Наименование товара</label>
+              <input 
+                type="text" 
+                placeholder="Например: Блюдо глубокое 30см"
+                {...register('name')}
+                className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-200"
+              />
+              {errors.name && <span className="text-[10px] text-red-400">{errors.name.message}</span>}
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-semibold text-slate-400">Категория</label>
+              <input 
+                type="text" 
+                placeholder="Например: Фарфор, Стекло..."
+                {...register('category')}
+                className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-200"
+              />
+              {errors.category && <span className="text-[10px] text-red-400">{errors.category.message}</span>}
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-400">Себестоимость</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  placeholder="0.00"
+                  {...register('costPrice')}
+                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-200"
+                />
+                {errors.costPrice && <span className="text-[10px] text-red-400">{errors.costPrice.message}</span>}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-400">Оптовая цена</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  placeholder="0.00"
+                  {...register('wholesalePrice')}
+                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-200"
+                />
+                {errors.wholesalePrice && <span className="text-[10px] text-red-400">{errors.wholesalePrice.message}</span>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-400">Начальный запас</label>
+                <input 
+                  type="number" 
+                  {...register('stockQuantity', { valueAsNumber: true })}
+                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-200"
+                />
+                {errors.stockQuantity && <span className="text-[10px] text-red-400">{errors.stockQuantity.message}</span>}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-slate-400">Крит. лимит</label>
+                <input 
+                  type="number" 
+                  {...register('minStockLevel', { valueAsNumber: true })}
+                  className="px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 focus:border-indigo-500 focus:outline-none text-xs text-slate-200"
+                />
+                {errors.minStockLevel && <span className="text-[10px] text-red-400">{errors.minStockLevel.message}</span>}
+              </div>
+            </div>
+
+            {apiError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-[11px] text-red-400 flex items-center gap-2">
+                <ShieldAlert size={14} />
+                <span>{apiError}</span>
+              </div>
+            )}
+
+            <button 
+              type="submit"
+              disabled={createMutation.isPending}
+              className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition-all disabled:opacity-50 mt-2"
+            >
+              {createMutation.isPending ? 'Загрузка...' : 'Добавить товар'}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
