@@ -157,6 +157,12 @@ class AnalyticsDailyView(APIView):
         else:
             end_date = today
 
+        if start_date > end_date:
+            return Response(
+                {"detail": "Начальная дата (start_date) не может быть позже конечной даты (end_date)."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # 1. Wholesale revenue (Sum of owner_profit for wholesale)
         wholesale_rev = Transaction.objects.filter(
             type='wholesale',

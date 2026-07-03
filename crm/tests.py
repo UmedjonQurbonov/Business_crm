@@ -263,3 +263,13 @@ class CRMBusinessLogicTests(APITestCase):
         sellers_url = reverse('seller-list')
         response = self.client.get(sellers_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_financial_analytics_invalid_range(self):
+        """
+        Tests that querying analytics with start_date > end_date returns 400.
+        """
+        self.set_auth(self.owner_token)
+        url = reverse('analytics_daily')
+        response = self.client.get(url + '?start_date=2026-07-03&end_date=2026-07-01')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Начальная дата (start_date) не может быть позже", response.data['detail'])
