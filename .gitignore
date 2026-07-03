@@ -145,3 +145,6 @@ cython_debug/
 .vscode/
 *.swp
 *.swo
+ai
+ttask.md 
+work_plan.md
