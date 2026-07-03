@@ -1,5 +1,6 @@
 from decimal import Decimal
 from django.db import transaction
+from django.core.validators import MinValueValidator
 from rest_framework import serializers
 from crm.models import User, Product, Client, Transaction, TransactionItem, Expense, DebtRepayment, SalaryPayout
 
@@ -45,7 +46,7 @@ class TransactionSerializer(serializers.ModelSerializer):
         decimal_places=2, 
         required=False, 
         write_only=True,
-        validators=[MinValueValidator(Decimal('0.00'))] if 'MinValueValidator' in globals() else []
+        validators=[MinValueValidator(Decimal('0.00'))]
     )
 
     class Meta:
@@ -87,6 +88,9 @@ class TransactionSerializer(serializers.ModelSerializer):
         if payment_status == 'partial_debt':
             if paid_amount is None:
                 raise serializers.ValidationError({"paid_amount": "При частичной оплате необходимо указать полученную сумму."})
+            total_amount = sum(item['fact_price'] * item['quantity'] for item in items_data)
+            if paid_amount > total_amount:
+                raise serializers.ValidationError({"paid_amount": "Полученная сумма не может быть больше суммы сделки."})
         elif paid_amount is not None:
             raise serializers.ValidationError({"paid_amount": "Полученная сумма указывается только при статусе оплаты 'partial_debt'."})
 
@@ -172,8 +176,6 @@ class TransactionSerializer(serializers.ModelSerializer):
                     locked_client.current_debt += total_amount
                     locked_client.save()
                 elif payment_status == 'partial_debt':
-                    if paid_amount > total_amount:
-                        raise serializers.ValidationError({"paid_amount": "Полученная сумма не может быть больше суммы сделки."})
                     debt_to_add = total_amount - paid_amount
                     locked_client.current_debt += debt_to_add
                     locked_client.save()

@@ -138,8 +138,25 @@ class AnalyticsDailyView(APIView):
         end_date_str = request.query_params.get('end_date')
 
         today = localdate()
-        start_date = parse_date(start_date_str) if start_date_str else today
-        end_date = parse_date(end_date_str) if end_date_str else today
+        if start_date_str:
+            start_date = parse_date(start_date_str)
+            if start_date is None:
+                return Response(
+                    {"start_date": "Неверный формат даты. Ожидается YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            start_date = today
+
+        if end_date_str:
+            end_date = parse_date(end_date_str)
+            if end_date is None:
+                return Response(
+                    {"end_date": "Неверный формат даты. Ожидается YYYY-MM-DD."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        else:
+            end_date = today
 
         # 1. Wholesale revenue (Sum of owner_profit for wholesale)
         wholesale_rev = Transaction.objects.filter(
