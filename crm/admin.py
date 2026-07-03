@@ -34,6 +34,7 @@ class TransactionAdmin(admin.ModelAdmin):
     list_display = ('id', 'type', 'client', 'created_by', 'total_amount', 'owner_profit', 'seller_profit', 'payment_status', 'created_at')
     list_filter = ('type', 'payment_status', 'created_at')
     search_fields = ('client__name', 'created_by__username')
+    list_select_related = ('client', 'created_by')
     inlines = [TransactionItemInline]
 
 class ExpenseAdmin(admin.ModelAdmin):
@@ -45,11 +46,13 @@ class DebtRepaymentAdmin(admin.ModelAdmin):
     list_display = ('id', 'client', 'amount', 'created_at', 'created_by')
     list_filter = ('created_at',)
     search_fields = ('client__name', 'created_by__username')
+    list_select_related = ('client', 'created_by')
 
 class SalaryPayoutAdmin(admin.ModelAdmin):
     list_display = ('id', 'seller', 'amount', 'created_at', 'created_by')
     list_filter = ('created_at',)
     search_fields = ('seller__username', 'created_by__username')
+    list_select_related = ('seller', 'created_by')
 
 admin.site.register(User, UserAdmin)
 admin.site.register(Product, ProductAdmin)
