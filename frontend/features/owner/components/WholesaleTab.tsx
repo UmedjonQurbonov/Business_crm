@@ -10,7 +10,13 @@ export default function WholesaleTab() {
   const queryClient = useQueryClient();
 
   // Fetch Products & Clients
-  const { data: products } = useQuery<Product[]>({ queryKey: ['products_full'] });
+  const { data: products } = useQuery<Product[]>({
+    queryKey: ['products_full'],
+    queryFn: async () => {
+      const response = await api.get('/api/products/');
+      return response.data;
+    }
+  });
   const { data: clients } = useQuery<Client[]>({
     queryKey: ['clients'],
     queryFn: async () => {
