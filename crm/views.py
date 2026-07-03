@@ -68,9 +68,8 @@ class TransactionViewSet(viewsets.ModelViewSet):
         return Transaction.objects.filter(created_by=self.request.user, type='retail').order_by('-created_at')
 
     def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            # Only owner can list all transactions generally, but get_queryset handles seller filtering
-            return [permissions.IsAuthenticated()]
+        if self.action == 'wholesale':
+            return [IsOwner()]
         return [permissions.IsAuthenticated()]
 
     @action(detail=False, methods=['post'])
