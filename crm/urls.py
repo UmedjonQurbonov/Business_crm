@@ -13,8 +13,13 @@ router.register(r'transactions', TransactionViewSet, basename='transaction')
 router.register(r'expenses', ExpenseViewSet, basename='expense')
 router.register(r'sellers', SellerViewSet, basename='seller')
 
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+
 urlpatterns = [
     path('', include(router.urls)),
     path('auth/login/', CustomObtainAuthToken.as_view(), name='login'),
     path('analytics/daily/', AnalyticsDailyView.as_view(), name='analytics_daily'),
+    path('schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]
